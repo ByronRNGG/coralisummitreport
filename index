@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Estadístico - Summit Corali</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Análisis de Participación</span>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 mt-2">Summit Corali — Tablero Interactivo</h1>
+        <p class="text-sm text-slate-500 mt-1">Horario corregido (-5h UTC → Hora Local 08:34–14:37) · Enfoque principal: Participantes USADO</p>
+      </div>
+      <div class="mt-4 md:mt-0 flex flex-wrap gap-2">
+        <button onclick="setEstado('USADO')" id="btn-USADO" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white shadow-sm transition">Participaron (USADO)</button>
+        <button onclick="setEstado('TODOS')" id="btn-TODOS" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Todos (176)</button>
+        <button onclick="setEstado('PENDIENTE')" id="btn-PENDIENTE" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">No asistieron (PENDIENTE)</button>
+      </div>
+    </div>
+
+    <!-- Filtros secundarios -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Género</label>
+        <select id="f-genero" onchange="render()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-slate-50">
+          <option value="ALL">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Etnia</label>
+        <select id="f-etnia" onchange="render()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-slate-50">
+          <option value="ALL">Todas</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Departamento</label>
+        <select id="f-depto" onchange="render()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-slate-50">
+          <option value="ALL">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Escolaridad</label>
+        <select id="f-esc" onchange="render()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-slate-50">
+          <option value="ALL">Todas</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Buscar Nombre / Empresa</label>
+        <input id="f-search" oninput="render()" type="text" placeholder="Ej. Pastelería, Maya..." class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-slate-50" />
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Registros Filtrados</p>
+        <p id="kpi-total" class="text-3xl font-bold text-indigo-600 mt-1">0</p>
+        <p id="kpi-sub" class="text-xs text-slate-400 mt-1"></p>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Participación Femenina</p>
+        <p id="kpi-fem" class="text-3xl font-bold text-pink-600 mt-1">0%</p>
+        <p id="kpi-fem-sub" class="text-xs text-slate-400 mt-1"></p>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Edad Promedio</p>
+        <p id="kpi-edad" class="text-3xl font-bold text-emerald-600 mt-1">0 años</p>
+        <p id="kpi-edad-sub" class="text-xs text-slate-400 mt-1"></p>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Educación Superior</p>
+        <p id="kpi-sup" class="text-3xl font-bold text-amber-600 mt-1">0%</p>
+        <p class="text-xs text-slate-400 mt-1">Univ. completa, incompleta o postgrado</p>
+      </div>
+    </div>
+
+    <!-- Gráficas Fila 1 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Distribución por Género</h3>
+        <canvas id="chartGenero" height="220"></canvas>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Identidad Étnica</h3>
+        <canvas id="chartEtnia" height="220"></canvas>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Rangos de Edad</h3>
+        <canvas id="chartEdad" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráficas Fila 2 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Nivel de Escolaridad</h3>
+        <canvas id="chartEscolaridad" height="220"></canvas>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-700 mb-3">Top Municipios de Procedencia</h3>
+        <canvas id="chartMunicipio" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfica Check-in -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
+      <h3 class="text-sm font-bold text-slate-700 mb-3">Curva de Llegada / Check-in (Hora Local Corregida — Intervalos de 30 min)</h3>
+      <canvas id="chartCheckin" height="95"></canvas>
+    </div>
+
+    <!-- Tabla de detalle -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-200 flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-700">Directorio de Participantes Filtrados</h3>
+        <span id="table-count" class="text-xs font-semibold text-slate-500"></span>
+      </div>
+      <div class="overflow-x-auto max-h-96">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-slate-100 text-slate-600 sticky top-0">
+            <tr>
+              <th class="py-3 px-4 font-semibold">Nombre</th>
+              <th class="py-3 px-4 font-semibold">Empresa / Emprendimiento</th>
+              <th class="py-3 px-4 font-semibold">Estado</th>
+              <th class="py-3 px-4 font-semibold">Check-in (Local)</th>
+              <th class="py-3 px-4 font-semibold">Género</th>
+              <th class="py-3 px-4 font-semibold">Etnia</th>
+              <th class="py-3 px-4 font-semibold">Edad</th>
+              <th class="py-3 px-4 font-semibold">Municipio</th>
+            </tr>
+          </thead>
+          <tbody id="table-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+const RAW_DATA = [{"id":1,"n":"Alejandra Alvarado","emp":"Ingenio Math","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":34,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Cantel"},{"id":2,"n":"Alma Mansilla","emp":"Alma.delicia","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":52,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":3,"n":"Ana Beatriz Venegas Vásquez","emp":"Avan Group","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":30,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":4,"n":"Andrea Gil","emp":"Bonita xela","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":27,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":5,"n":"Angel Gonzalez","emp":"Crujifrut","est":"PENDIENTE","chk":null,"gen":"Masculino","etn":"Maya","edad":32,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":6,"n":"Ashley Quixtan","emp":"El vaquero aguachile","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":31,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":7,"n":"Aura gricelda Sabaj Hernández","emp":"No tiene","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":43,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":8,"n":"Belsy Mazariegos","emp":"Insumed","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":48,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":9,"n":"Brenda Paredes","emp":"Ninguno","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":32,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":10,"n":"Claudia Ester Chocoy Cordón","emp":"Helados Artesanales Ester","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":38,"esc":"Algunos años de universidad o instituto superior","dep":"TOTONICAPÁN","mun":"San Cristóbal Totonicapán"},{"id":11,"n":"Clemencia Suchi","emp":"Xelajuj Noj Chocolatería","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":54,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":12,"n":"Cristian Gómez","emp":"Go producciones","est":"PENDIENTE","chk":null,"gen":"Masculino","etn":"Ladino","edad":43,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":13,"n":"Darline Chiroy","emp":"Kendra's gourmet bakery","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":24,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":14,"n":"Emily Janine Cancinos Vásquez","emp":"Pastelería Posdata","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":26,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":15,"n":"Ericka Vanessa Racancoj Guzman","emp":"ERIVA Boutique","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":30,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":16,"n":"Evelyn Maria Ramirez Torres","emp":"Joyería Israel","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":31,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":17,"n":"Gabriela Victoria López de León","emp":"Candy Cacao","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":33,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":18,"n":"Genesis Alejandra Grijalva Velásquez","emp":"12PM","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":37,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":19,"n":"Helen Paola Díaz","emp":"Con_Ciencia Ingeniería","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":34,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Cantel"},{"id":20,"n":"Hellen Brigett Argueta López","emp":"Salud y vida","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":34,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":21,"n":"Ingrid Adriana Sajquim Coyoy Sajquim Coyoy","emp":"ADRIS'SALON","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":22,"n":"Jackeline Andrea Gil Estrada","emp":"No tengo","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":45,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":23,"n":"Jackeline Reyes","emp":"Suspiros","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":33,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":24,"n":"Jaqueline Pahola Barrios de León de Monroy","emp":"Asados Jocabeth","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":45,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":25,"n":"Jasmine Estrada","emp":"Calzado Estrada Hermanos","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":27,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":26,"n":"Juana Gabriela Chanchavac","emp":"Aby tu estilo y color","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":34,"esc":"Algunos años de secundaria","dep":"TOTONICAPÁN","mun":"Momostenango"},{"id":27,"n":"Karen Arévalo","emp":"Karen a Color","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":50,"esc":"Algunos años de secundaria","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":28,"n":"Kelly Hernandez","emp":"Silver","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":30,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"San Francisco La Unión"},{"id":29,"n":"Kímberli Mariana Giron Luna","emp":"Mar Luna","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":24,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"San Carlos Sija"},{"id":30,"n":"Leslie Vanessa","emp":"Almacén California","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Prefiero no responder","edad":32,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":31,"n":"Lissette Estrada Colindres","emp":"Pastelería de Gelatinas","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":66,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":32,"n":"Lucía E Coti Juárez","emp":"COTA","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":27,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":33,"n":"Lucrecia del Rosario Pisquiy Pac","emp":"Se asesora en empoderamiento económico","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":57,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":34,"n":"Luis Soto","emp":"Tipicos Enrique","est":"PENDIENTE","chk":null,"gen":"Masculino","etn":"Ladino","edad":55,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":35,"n":"Luz Rosario Yela","emp":"Liderlik","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":55,"esc":"Formación profesional o técnica","dep":"GUATEMALA","mun":"Ciudad de Guatemala"},{"id":36,"n":"Lydia rosario Ochoa tax","emp":"Independiente","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":42,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":37,"n":"Maria del Carmen Osorio Vielman","emp":"Servicios Administrativos Vielman","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":41,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"RETALHULEU","mun":"Retalhuleu"},{"id":38,"n":"Maria Magdalena Cardona Ramírez","emp":"Cafetería y Pastelería Doña Luisa.","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":39,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Concepción Chiquirichapa"},{"id":39,"n":"Melanie De leon","emp":"Skybloom","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":29,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":40,"n":"Mildred Adriana Alvarado Fuentes","emp":"Novedades TZ’UNIN y Flowers MAY","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":38,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":41,"n":"Mildred Adriana Alvarado Fuentes","emp":"Novedades TZ’UNIN y Flowers MAY","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":38,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":42,"n":"Mirna Leticia Soberanis Citalan","emp":"Diversiones Yayita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":29,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":43,"n":"Mishelle Cifuentes","emp":"INGENIA","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":29,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":44,"n":"Nancy Ramírez","emp":"Efy","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":37,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":45,"n":"Olga Marina Romero gonzalez","emp":"Subli-todo","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":34,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":46,"n":"Olga Marina Romero Gonzalez","emp":"Subli-todo","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":34,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":47,"n":"Rosa Nieves Santos de León","emp":"Rosset","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":33,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":48,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":49,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":50,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":51,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":52,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":53,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":54,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":55,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":56,"n":"Saúl Cifuentes","emp":"Squisito","est":"PENDIENTE","chk":null,"gen":"Masculino","etn":"Ladino","edad":54,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":57,"n":"Sheila Salanic","emp":"Monarca","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":47,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":58,"n":"Soledad Paola Cuzal Toc","emp":"Florecer Tanatología","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":51,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":59,"n":"Sonia del Rosario Monzón Quemé","emp":"Productos Santa Delicia","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":40,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":60,"n":"Sonia Monzón Quemé","emp":"Productos Santa Delicia","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":40,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":61,"n":"Sonia Monzón Quemé","emp":"Productos Santa Delicia","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":40,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":62,"n":"Soraya Hernández","emp":"Hersum","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Maya","edad":56,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":63,"n":"Tatty Mena","emp":"Embutidos VM","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":29,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":64,"n":"Valeria de Los Ángeles Rodríguez Rodríguez","emp":"Servicios La Viña","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":27,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":65,"n":"Vasti Callax","emp":"Sirius Artesanal","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":42,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":66,"n":"Vasti Callax","emp":"Sirius Artesanal","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":42,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":67,"n":"Walquiria Gramajo","emp":"Kirias Love","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":41,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":68,"n":"Yadira Saraí González González","emp":"Ninguno","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":22,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":69,"n":"Yesenia Suheydi Rodas de Leon","emp":"MyS Eventos Elegantes","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":43,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"San Carlos Sija"},{"id":70,"n":"Yumaira Maribel Maldonado Valenzuela","emp":"Psicología y Bienestar Quirón","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Ladino","edad":33,"esc":"Universidad o instituto superior completa","dep":"TOTONICAPÁN","mun":"San Cristóbal Totonicapán"},{"id":71,"n":"Zoe Andrea López Miche","emp":"Ninguno","est":"PENDIENTE","chk":null,"gen":"Femenino","etn":"Mestizo","edad":19,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":72,"n":"Aldina Maribel Calderón López","emp":"Salón de belleza Mafe","est":"USADO","chk":"10:46:14","gen":"Femenino","etn":"Ladino","edad":36,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":73,"n":"Alejandra Alvarado","emp":"Ingenio Math","est":"USADO","chk":"09:44:26","gen":"Femenino","etn":"Maya","edad":34,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Cantel"},{"id":74,"n":"América Cecilia Pérez Chó","emp":"Huse Cristal","est":"USADO","chk":"10:49:25","gen":"Femenino","etn":"Ladino","edad":30,"esc":"Universidad o instituto superior completa","dep":"SAN MARCOS","mun":"San Marcos"},{"id":75,"n":"Ana Beatriz Suchi Mejia","emp":"Textiles Nikte","est":"USADO","chk":"11:04:27","gen":"Femenino","etn":"Maya","edad":57,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":76,"n":"Andrea López","emp":"RNGG","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":77,"n":"Angela Waleska Rodríguez Vallejo","emp":"Ávila Academy","est":"USADO","chk":"09:15:16","gen":"Femenino","etn":"Ladino","edad":37,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":78,"n":"Antonia Gabriela Esmeralda Jiménez Xec","emp":"Luz de Luna desserts","est":"USADO","chk":"13:20:57","gen":"Femenino","etn":"Maya","edad":22,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":79,"n":"Beverly Melody Yesenia Soto Ovalle","emp":"Café Doña Triny / Tortilleria la Mejor","est":"USADO","chk":"12:21:15","gen":"Femenino","etn":"Ladino","edad":36,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":80,"n":"Bianqui Lucrecia Hernández Estacuy","emp":"Servi Clean xela","est":"USADO","chk":"09:40:08","gen":"Femenino","etn":"Maya","edad":36,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":81,"n":"Carla Maria Urbina González","emp":"La tacita de Luz","est":"USADO","chk":"09:08:26","gen":"Femenino","etn":"Ladino","edad":26,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":82,"n":"Celestina Charchalac","emp":"Bisutería Viajera!","est":"USADO","chk":"09:30:51","gen":"Femenino","etn":"Mestizo","edad":47,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":83,"n":"Celina Esther Morales Maldonado","emp":"De mujer a mujer a c t","est":"USADO","chk":"08:50:13","gen":"Femenino","etn":"Ladino","edad":44,"esc":"Formación profesional o técnica","dep":"TOTONICAPÁN","mun":"San Cristóbal Totonicapán"},{"id":84,"n":"Cindy Iveth Ramirez Villatoro","emp":"Auténtica","est":"USADO","chk":"09:27:28","gen":"Femenino","etn":"Ladino","edad":47,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":85,"n":"Cintia Herrera","emp":"Labor la selva","est":"USADO","chk":"10:00:28","gen":"Femenino","etn":"Ladino","edad":42,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":86,"n":"Claudia Ester Chocoy Cordón","emp":"Helados Artesanales Ester","est":"USADO","chk":"09:06:29","gen":"Femenino","etn":"Mestizo","edad":38,"esc":"Algunos años de universidad o instituto superior","dep":"TOTONICAPÁN","mun":"San Cristóbal Totonicapán"},{"id":87,"n":"Claudia Lorena Orozco","emp":"Crece","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":88,"n":"Crísthal Jireh Gómez Méndez","emp":"Agencia Creativa Pop","est":"USADO","chk":"12:45:21","gen":"Femenino","etn":"Mestizo","edad":23,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":89,"n":"Darlin Alejandra Garcia Ovalle","emp":"Ninguno","est":"USADO","chk":"11:11:41","gen":"Femenino","etn":"Ladino","edad":24,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Colomba Costa Cuca"},{"id":90,"n":"David Casasola","emp":"UFM","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":91,"n":"Debora Leonor Méndez","emp":"Multiservicios DEBYS","est":"USADO","chk":"12:20:38","gen":"Femenino","etn":"Maya","edad":40,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":92,"n":"Diana Pérez","emp":"Multiclean express","est":"USADO","chk":"10:49:35","gen":"Femenino","etn":"Mestizo","edad":31,"esc":"Secundaria completa","dep":"SAN MARCOS","mun":"San Marcos"},{"id":93,"n":"Dina Abigail Batz Galindo","emp":"Firma Legal Batz y Asociados, boutique Loomdain","est":"USADO","chk":"09:29:15","gen":"Femenino","etn":"Ladino","edad":28,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":94,"n":"Dina Ester Xec Salanic","emp":"Luz de Luna desserts","est":"USADO","chk":"13:21:04","gen":"Femenino","etn":"Maya","edad":22,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":95,"n":"Dory Estrella Miche de León","emp":"Mi-Kape","est":"USADO","chk":"09:14:34","gen":"Femenino","etn":"Mestizo","edad":55,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":96,"n":"Dulce María Orozco Cotóm","emp":"The Dumpling Company","est":"USADO","chk":"09:06:22","gen":"Femenino","etn":"Maya","edad":27,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":97,"n":"Edna Lilibeth Moreno Gonzalez","emp":"Carpet Desing","est":"USADO","chk":"10:00:58","gen":"Masculino","etn":"Ladino","edad":30,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":98,"n":"Edna Ruth Batz Galindo","emp":"Bufete jurídico Batz & Asociados","est":"USADO","chk":"09:29:16","gen":"Femenino","etn":"Ladino","edad":32,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":99,"n":"Elica De sanchez","emp":"Happy Coffe","est":"USADO","chk":"10:44:12","gen":"Femenino","etn":"Ladino","edad":31,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":100,"n":"Eloina Montsserrat De León","emp":"Mozzarella Xela","est":"USADO","chk":"09:08:23","gen":"Femenino","etn":"Ladino","edad":32,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":101,"n":"Enma Susana Girón de León","emp":"Doña Sussy","est":"USADO","chk":"09:39:37","gen":"Femenino","etn":"Ladino","edad":48,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":102,"n":"Ericka Barrios","emp":"Na","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":103,"n":"Ericka Vanessa Racancoj Guzmán","emp":"ERIVA BOUTIQUE","est":"USADO","chk":"09:27:33","gen":"Femenino","etn":"Ladino","edad":30,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":104,"n":"Evelyn Nineth Gómez Cifuentes","emp":"Venta chocolate","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":105,"n":"Eyleen Teresa Menchú Tuy","emp":"Destellos auténticos (en proceso)","est":"USADO","chk":"10:06:38","gen":"Femenino","etn":"Maya","edad":23,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":106,"n":"Fernanda Tucux","emp":"Delicadezas Quetzaltecas","est":"USADO","chk":"09:39:20","gen":"Femenino","etn":"Maya","edad":44,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":107,"n":"Genesis Alejandra Grijalva Velásquez","emp":"12PM","est":"USADO","chk":"10:42:57","gen":"Femenino","etn":"Ladino","edad":37,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":108,"n":"Giovanni Gomez","emp":"Divina misericordia S.A.","est":"USADO","chk":"09:42:46","gen":"Masculino","etn":"Mestizo","edad":46,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":109,"n":"Gladys Hernández","emp":"Vip fashion xela","est":"USADO","chk":"10:00:18","gen":"Femenino","etn":"Ladino","edad":45,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":110,"n":"Glenda de León","emp":"RNGG","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":111,"n":"Hermelinda Velasquez","emp":"Viaja con arte","est":"USADO","chk":"10:08:00","gen":"Femenino","etn":"Maya","edad":23,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":112,"n":"Imelda Mazariegos","emp":"Oasis","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":113,"n":"Ingrid Angelica Chuc Pérez","emp":"DE MUJER A MUJER A C T","est":"USADO","chk":"08:49:43","gen":"Femenino","etn":"Maya","edad":40,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":114,"n":"Ingrid Johana Izara Romero","emp":"CONFECCIONES ROMIZ","est":"USADO","chk":"10:03:10","gen":"Femenino","etn":"Maya","edad":24,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":115,"n":"Iris Magda Girasol Alejá puac","emp":"Ninguno","est":"USADO","chk":"09:51:54","gen":"Femenino","etn":"Maya","edad":30,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Cantel"},{"id":116,"n":"Ivone Méndez Herrera","emp":"Ivone Arte y Más","est":"USADO","chk":"08:55:51","gen":"Femenino","etn":"Ladino","edad":46,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":117,"n":"Jackeline Stephanie Chan Gil","emp":"MAVELA | JUGOS TROPICALES","est":"USADO","chk":"09:07:41","gen":"Femenino","etn":"Ladino","edad":25,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":118,"n":"Jennifer Wolff","emp":"Ninguno","est":"USADO","chk":"09:05:49","gen":"Femenino","etn":"Ladino","edad":40,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":119,"n":"Jessica Villatoro","emp":"Aun estoy en proceso de descubrir lo que deseo","est":"USADO","chk":"10:06:05","gen":"Femenino","etn":"Ladino","edad":29,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":120,"n":"Johana Guzmán Relac","emp":"Aesthetic Beauty","est":"USADO","chk":"09:59:46","gen":"Femenino","etn":"Maya","edad":35,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":121,"n":"Juana Chavez","emp":"UFM","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":122,"n":"Karina Cardona","emp":"Squisito","est":"USADO","chk":"09:07:34","gen":"Femenino","etn":"Ladino","edad":55,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":123,"n":"Karla Briones","emp":"Yanbal","est":"USADO","chk":"08:52:52","gen":"Femenino","etn":"Ladino","edad":47,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":124,"n":"Karla Luciana Soto González","emp":"De la Tierra productos Agroartesanales","est":"USADO","chk":"08:58:11","gen":"Femenino","etn":"Ladino","edad":35,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":125,"n":"kendra chiroy","emp":"Kendra’s gourmet bakery","est":"USADO","chk":"09:41:40","gen":"Femenino","etn":"Ladino","edad":24,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":126,"n":"Kevin Aguilar","emp":"Espacio","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":127,"n":"Larissa Bibiana Rodriguez Vallejo","emp":"Servicios La Viña","est":"USADO","chk":"09:15:49","gen":"Femenino","etn":"Ladino","edad":46,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":128,"n":"Laura Recinos","emp":"Laura Lucía Studio","est":"USADO","chk":"09:09:47","gen":"Femenino","etn":"Ladino","edad":45,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":129,"n":"Lilia Esther Poncio Tistoj de Ramírez","emp":"Ninguno","est":"USADO","chk":"11:24:40","gen":"Femenino","etn":"Maya","edad":41,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"La Esperanza"},{"id":130,"n":"Lilian Betzabel Marroquin García","emp":"Lili's Textile","est":"USADO","chk":"09:16:53","gen":"Femenino","etn":"Maya","edad":28,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":131,"n":"Lisseth Moreno","emp":"Carpet Design","est":"USADO","chk":"10:01:21","gen":"Femenino","etn":"Ladino","edad":40,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":132,"n":"Lourdes Barreno","emp":"Panadería De las Flores Xela","est":"USADO","chk":"09:42:55","gen":"Femenino","etn":"Maya","edad":42,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":133,"n":"Lourdes Coyoy","emp":"Todavía no tiene","est":"USADO","chk":"12:00:25","gen":"Femenino","etn":"Maya","edad":44,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":134,"n":"Lucrecia evangelina Nimatuj Cojulúm","emp":"Esencia","est":"USADO","chk":"10:22:26","gen":"Femenino","etn":"Mestizo","edad":40,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":135,"n":"Luisa Castañeda","emp":"Hangsang world","est":"USADO","chk":"09:56:15","gen":"Femenino","etn":"Mestizo","edad":27,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":136,"n":"Mabelyn Gramajo","emp":"Eventos","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":137,"n":"María Marroquín","emp":"Ninguno","est":"USADO","chk":"09:09:53","gen":"Femenino","etn":"Ladino","edad":23,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":138,"n":"María José Villatoro Herrera","emp":"Espacio","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":139,"n":"María Mejía","emp":"Textiles siempre bella","est":"USADO","chk":"09:59:15","gen":"Femenino","etn":"Maya","edad":30,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":140,"n":"María Rosenda García Gómez","emp":"Rosé repostería","est":"USADO","chk":"09:16:57","gen":"Femenino","etn":"Maya","edad":42,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":141,"n":"Mariela Hernandez","emp":"Happy Dogs","est":"USADO","chk":"09:47:07","gen":"Femenino","etn":"Maya","edad":34,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":142,"n":"Maritza Taracena","emp":"Hangsang World","est":"USADO","chk":"09:06:56","gen":"Femenino","etn":"Ladino","edad":57,"esc":"Formación profesional o técnica","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":143,"n":"Martha Lucrecia Pojoy Estrada","emp":"Patitas Felices","est":"USADO","chk":"09:14:50","gen":"Femenino","etn":"Ladino","edad":37,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":144,"n":"Martha Yanira Quino Pérez","emp":"Café con Fé","est":"USADO","chk":"09:07:28","gen":"Femenino","etn":"Ladino","edad":30,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"San Juan Ostuncalco"},{"id":145,"n":"Mauricio García Paz","emp":"UFM","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":146,"n":"Mayra Yolanda Sontay Poroj","emp":"Ropa y accesorios de montaña","est":"USADO","chk":"10:29:40","gen":"Femenino","etn":"Mestizo","edad":36,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":147,"n":"Melissa Tambriz","emp":"Belleza","est":"USADO","chk":"09:25:27","gen":"Femenino","etn":"Ladino","edad":20,"esc":"Algunos años de secundaria","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":148,"n":"Mirna López flores","emp":"La Mariposita","est":"USADO","chk":"09:35:51","gen":"Femenino","etn":"Mestizo","edad":44,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":149,"n":"Mishelle Cifuentes","emp":"INGENIA","est":"USADO","chk":"10:01:06","gen":"Femenino","etn":"Ladino","edad":29,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":150,"n":"Morales Salanic","emp":"Monarca","est":"USADO","chk":"09:39:10","gen":"Femenino","etn":"Maya","edad":47,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":151,"n":"Naomi Guerra","emp":"Farha pastelería","est":"USADO","chk":"09:14:44","gen":"Femenino","etn":"Mestizo","edad":31,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":152,"n":"Naomi Paiz Díaz","emp":"Lys Violets","est":"USADO","chk":"10:41:31","gen":"Femenino","etn":"Ladino","edad":16,"esc":"Algunos años de secundaria","dep":"QUETZALTENANGO","mun":"Cantel"},{"id":153,"n":"Nataly Sofía","emp":"Hansang World","est":"USADO","chk":"09:08:44","gen":"Femenino","etn":"Ladino","edad":25,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":154,"n":"Odalys Eusebia Sapón Tzul","emp":"No cuenta con nombre comercial.","est":"USADO","chk":"11:29:44","gen":"Femenino","etn":"Maya","edad":21,"esc":"Universidad o instituto superior completa","dep":"TOTONICAPÁN","mun":"Totonicapán"},{"id":155,"n":"Priscila Marilú Chocoy Cordón","emp":"Dulce vainilla","est":"USADO","chk":"09:04:57","gen":"Femenino","etn":"Ladino","edad":26,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":156,"n":"Prueba App","emp":"Bynovate","est":"USADO","chk":"08:34:55","gen":"Masculino","etn":"Mestizo","edad":33,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":157,"n":"Raquel Cux Gramajo","emp":"Oficina Jurídica CRG","est":"USADO","chk":"09:28:52","gen":"Femenino","etn":"Maya","edad":35,"esc":"Postgrado (eje. Maestría o Doctorado)","dep":"QUETZALTENANGO","mun":"Salcajá"},{"id":158,"n":"Roberto Daniel Minera","emp":"Patitas Felices","est":"USADO","chk":"09:16:32","gen":"Masculino","etn":"Mestizo","edad":34,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":159,"n":"Rosa Nieves Santos de León","emp":"Rosset","est":"USADO","chk":"09:51:14","gen":"Femenino","etn":"Mestizo","edad":33,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":160,"n":"Roxana Calderon","emp":"Hospital espíritu santo","est":"USADO","chk":"09:42:39","gen":"Femenino","etn":"Mestizo","edad":42,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":161,"n":"Roxana Cocinero","emp":"KrujiFrut_gt","est":"USADO","chk":"09:25:22","gen":"Femenino","etn":"Maya","edad":35,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":162,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"USADO","chk":"09:08:51","gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":163,"n":"Sara Beatriz Castillo Leiva","emp":"Pasteles de Betita","est":"USADO","chk":"12:23:21","gen":"Femenino","etn":"Maya","edad":50,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":164,"n":"Saúl Cifuentes","emp":"Squisito","est":"USADO","chk":"09:08:31","gen":"Masculino","etn":"Ladino","edad":54,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":165,"n":"Sheyla Lucrecia Soto González","emp":"Esencia Beauty Studio","est":"USADO","chk":"08:57:56","gen":"Femenino","etn":"Ladino","edad":42,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":166,"n":"Silvia Carolina farfan","emp":"Eufloria floristería","est":"USADO","chk":"14:37:59","gen":"Femenino","etn":"Ladino","edad":48,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":167,"n":"Sindy Daniela Esther Jiménez Xec","emp":"Luz de Luna desserts","est":"USADO","chk":"09:06:44","gen":"Femenino","etn":"Maya","edad":22,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":168,"n":"Sofía Juárez","emp":"Oasis","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":169,"n":"Soledad Paola Cuzal Toc","emp":"Tanatologia florecer","est":"USADO","chk":"09:09:37","gen":"Femenino","etn":"Maya","edad":51,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":170,"n":"Sonia del Rosario Monzón Quemé","emp":"Productos Santa Delicia","est":"USADO","chk":"10:19:11","gen":"Femenino","etn":"Maya","edad":40,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":171,"n":"Teresa Tuy","emp":"Floristeria","est":"USADO","chk":"10:05:30","gen":"Femenino","etn":"Maya","edad":49,"esc":"Secundaria completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":172,"n":"Thelma Bernardina Gutiérrez zapeta","emp":"DE MUJER A MUJER ACT","est":"USADO","chk":"08:49:56","gen":"Femenino","etn":"Maya","edad":52,"esc":"Formación profesional o técnica","dep":"TOTONICAPÁN","mun":"Totonicapán"},{"id":173,"n":"Víctor Tarax","emp":"12pm","est":"USADO","chk":null,"gen":"Sin datos","etn":"Sin datos","edad":null,"esc":"Sin datos","dep":"Sin datos","mun":"Sin datos"},{"id":174,"n":"Wendy Ixtabalán","emp":"Wendydetallesxela","est":"USADO","chk":"09:39:55","gen":"Femenino","etn":"Ladino","edad":37,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":175,"n":"Zoe Andrea López Miche","emp":"Venta de café","est":"USADO","chk":"09:19:31","gen":"Femenino","etn":"Mestizo","edad":19,"esc":"Universidad o instituto superior completa","dep":"QUETZALTENANGO","mun":"Quetzaltenango"},{"id":176,"n":"Zury Tezo","emp":"Gelapasteles D'ZURY","est":"USADO","chk":"09:12:26","gen":"Femenino","etn":"Maya","edad":51,"esc":"Algunos años de universidad o instituto superior","dep":"QUETZALTENANGO","mun":"Quetzaltenango"}];
+
+let currentEstado = 'USADO';
+let charts = {};
+
+function initFilters() {
+  const fill = (id, key) => {
+    const vals = [...new Set(RAW_DATA.map(d => d[key]))].sort();
+    const sel = document.getElementById(id);
+    vals.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  };
+  fill('f-genero', 'gen');
+  fill('f-etnia', 'etn');
+  fill('f-depto', 'dep');
+  fill('f-esc', 'esc');
+}
+
+function setEstado(est) {
+  currentEstado = est;
+  ['USADO', 'TODOS', 'PENDIENTE'].forEach(k => {
+    const b = document.getElementById('btn-' + k);
+    b.className = k === est
+      ? 'px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white shadow-sm transition'
+      : 'px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+  });
+  render();
+}
+
+function countBy(arr, key) {
+  const map = {};
+  arr.forEach(d => { const v = d[key] || 'Sin datos'; map[v] = (map[v] || 0) + 1; });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+function updateChart(id, type, labels, data, colors, horizontal = false) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        label: 'Participantes',
+        data,
+        backgroundColor: colors,
+        borderRadius: type === 'bar' ? 6 : 0,
+        fill: type === 'line',
+        borderColor: '#4f46e5',
+        tension: 0.35
+      }]
+    },
+    options: {
+      indexAxis: horizontal ? 'y' : 'x',
+      responsive: true,
+      plugins: { legend: { display: type === 'doughnut' || type === 'pie', position: 'bottom' } },
+      scales: (type === 'bar' || type === 'line') ? { y: { beginAtZero: true, ticks: { precision: 0 } } } : {}
+    }
+  });
+}
+
+function render() {
+  const fg = document.getElementById('f-genero').value;
+  const fe = document.getElementById('f-etnia').value;
+  const fd = document.getElementById('f-depto').value;
+  const fs = document.getElementById('f-esc').value;
+  const q = document.getElementById('f-search').value.toLowerCase().trim();
+
+  const filtered = RAW_DATA.filter(d => {
+    if (currentEstado !== 'TODOS' && d.est !== currentEstado) return false;
+    if (fg !== 'ALL' && d.gen !== fg) return false;
+    if (fe !== 'ALL' && d.etn !== fe) return false;
+    if (fd !== 'ALL' && d.dep !== fd) return false;
+    if (fs !== 'ALL' && d.esc !== fs) return false;
+    if (q && !(d.n.toLowerCase().includes(q) || d.emp.toLowerCase().includes(q) || d.mun.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  // KPIs
+  document.getElementById('kpi-total').textContent = filtered.length;
+  document.getElementById('kpi-sub').textContent = `De ${RAW_DATA.length} registros totales`;
+
+  const fem = filtered.filter(d => d.gen === 'Femenino').length;
+  const conFicha = filtered.filter(d => d.gen !== 'Sin datos').length;
+  document.getElementById('kpi-fem').textContent = filtered.length ? ((fem / filtered.length) * 100).toFixed(1) + '%' : '0%';
+  document.getElementById('kpi-fem-sub').textContent = `${fem} mujeres (${conFicha ? ((fem/conFicha)*100).toFixed(1) : 0}% con ficha)`;
+
+  const edades = filtered.map(d => d.edad).filter(e => e !== null);
+  const avgEdad = edades.length ? (edades.reduce((a, b) => a + b, 0) / edades.length).toFixed(1) : 'N/A';
+  document.getElementById('kpi-edad').textContent = edades.length ? `${avgEdad} años` : 'N/A';
+  document.getElementById('kpi-edad-sub').textContent = edades.length ? `Rango: ${Math.min(...edades)} a ${Math.max(...edades)} años` : 'Sin datos de edad';
+
+  const sup = filtered.filter(d => ['Universidad o instituto superior completa', 'Algunos años de universidad o instituto superior', 'Postgrado (eje. Maestría o Doctorado)'].includes(d.esc)).length;
+  document.getElementById('kpi-sup').textContent = filtered.length ? ((sup / filtered.length) * 100).toFixed(1) + '%' : '0%';
+
+  // Charts
+  const gData = countBy(filtered, 'gen');
+  updateChart('chartGenero', 'doughnut', gData.map(x => x[0]), gData.map(x => x[1]), ['#ec4899', '#94a3b8', '#3b82f6']);
+
+  const eData = countBy(filtered, 'etn');
+  updateChart('chartEtnia', 'doughnut', eData.map(x => x[0]), eData.map(x => x[1]), ['#6366f1', '#10b981', '#f59e0b', '#94a3b8', '#8b5cf6']);
+
+  const bins = { '16-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55+': 0 };
+  edades.forEach(e => {
+    if (e <= 24) bins['16-24']++;
+    else if (e <= 34) bins['25-34']++;
+    else if (e <= 44) bins['35-44']++;
+    else if (e <= 54) bins['45-54']++;
+    else bins['55+']++;
+  });
+  updateChart('chartEdad', 'bar', Object.keys(bins), Object.values(bins), '#10b981');
+
+  const escData = countBy(filtered, 'esc');
+  updateChart('chartEscolaridad', 'bar', escData.map(x => x[0].replace('Universidad o instituto superior ', 'Univ. ')), escData.map(x => x[1]), '#6366f1', true);
+
+  const munData = countBy(filtered, 'mun').slice(0, 8);
+  updateChart('chartMunicipio', 'bar', munData.map(x => x[0]), munData.map(x => x[1]), '#f59e0b', true);
+
+  // Check-in curve (08:30 to 14:30 local time)
+  const slots = ['08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30'];
+  const slotCounts = Object.fromEntries(slots.map(s => [s, 0]));
+  filtered.forEach(d => {
+    if (!d.chk) return;
+    const [hh, mm] = d.chk.split(':').map(Number);
+    const key = `${String(hh).padStart(2, '0')}:${mm < 30 ? '00' : '30'}`;
+    if (slotCounts[key] !== undefined) slotCounts[key]++;
+  });
+  updateChart('chartCheckin', 'line', slots, slots.map(s => slotCounts[s]), 'rgba(79,70,229,0.15)');
+
+  // Table
+  document.getElementById('table-count').textContent = `Mostrando ${filtered.length} registros`;
+  document.getElementById('table-body').innerHTML = filtered.map(d => `
+    <tr class="hover:bg-slate-50">
+      <td class="py-2.5 px-4 font-medium text-slate-900">${d.n}</td>
+      <td class="py-2.5 px-4 text-slate-600">${d.emp}</td>
+      <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${d.est === 'USADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${d.est}</span></td>
+      <td class="py-2.5 px-4 text-slate-500">${d.chk || '—'}</td>
+      <td class="py-2.5 px-4 text-slate-600">${d.gen}</td>
+      <td class="py-2.5 px-4 text-slate-600">${d.etn}</td>
+      <td class="py-2.5 px-4 text-slate-600">${d.edad ?? '—'}</td>
+      <td class="py-2.5 px-4 text-slate-600">${d.mun}</td>
+    </tr>
+  `).join('');
+}
+
+initFilters();
+render();
+</script>
+</body>
+</html>
